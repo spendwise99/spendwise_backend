@@ -21,7 +21,7 @@ export const generateAccessToken = (user: any) => {
       isVerified: user.isVerified,
     },
     ACCESS_TOKEN_SECRET,
-    { expiresIn: '15m' } // expires in 15 minutes
+    { expiresIn: '1d' } // expires in 15 minutes
   );
 };
 
