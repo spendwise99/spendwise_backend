@@ -136,7 +136,7 @@ userPayeeRoutes.get("/search-payee", async (req: any, res: any) => {
     const foundUser = await User.findOne({
       _id: id,
       userId: { $ne: requestedUser.userId },
-    }).select("firstName lastName userName email _id");
+    }).select("firstName lastName userName email _id imageUrl");
 
     if (!foundUser) {
       return res.status(404).json({ message: "User not found" });
