@@ -57,7 +57,7 @@ authRoutes.post(
         firstName,
         lastName,
         phoneNumber,
-        age,
+        // age,
         imageUrl,
       });
       await user.save();
@@ -209,7 +209,7 @@ authRoutes.post("/login", async (req: any, res: any) => {
         imageUrl: user.imageUrl,
         phoneNumber: user.phoneNumber,
         userId: user._id,
-        age: user.age,
+        // age: user.age,
         balance: user.balance,
         isVerified: user.isVerified,
         role: user.role,
