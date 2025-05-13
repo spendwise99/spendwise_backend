@@ -118,4 +118,39 @@ userPayeeRoutes.delete("/", async (req: any, res: any) => {
   }
 });
 
+userPayeeRoutes.get("/search-payee", async (req: any, res: any) => {
+  try {
+    const requestedUser = req.user;
+    const { id } = req.query;
+
+    if (!id) {
+      return res
+        .status(400)
+        .json({ message: "Please provide an id to search" });
+    }
+
+    if (id === requestedUser.userId) {
+      return res.status(400).json({ message: "Cannot search for yourself" });
+    }
+
+    const foundUser = await User.findOne({
+      _id: id,
+      userId: { $ne: requestedUser.userId },
+    }).select("firstName lastName userName email _id");
+
+    if (!foundUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "User retrieved successfully",
+      data: foundUser,
+    });
+  } catch (error) {
+    console.error("Error searching user:", error);
+    return res.status(500).json({ message: "Error searching user", error });
+  }
+});
+
+
 export default userPayeeRoutes;
