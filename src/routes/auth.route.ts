@@ -10,7 +10,7 @@ import {
 } from "../validator/auth.validator";
 import uploadImage from "../middleware/multer.middleware";
 import { uploadToCloudinary } from "../utils/cloudinary";
-import { generateOTP, getOTP, sendOTPEmail } from "../utils/otp";
+import { generateOTP, sendOTPEmail } from "../utils/otp";
 import {
   generateAccessToken,
   generateRefreshToken,
@@ -18,6 +18,7 @@ import {
 } from "../utils/jwt";
 import bcrypt from "bcryptjs";
 import { sendTwilioSMS } from "../utils/twilio.utils";
+import UserOtp from "../models/UserOtp.model";
 
 const authRoutes = express.Router();
 
@@ -31,8 +32,7 @@ authRoutes.post(
       return res.status(400).json({ message: error.details[0].message });
 
     try {
-      const { email, userName, firstName, lastName, phoneNumber } =
-        req.body;
+      const { email, userName, firstName, lastName, phoneNumber } = req.body;
 
       const existingUser = await User.findOne({ email });
       if (existingUser)
@@ -49,67 +49,75 @@ authRoutes.post(
             .json({ message: "Image upload failed", error: uploadErr });
         }
       }
-      const otp = generateOTP();
-
+      const [isPhoneVerified, isEmailVerified] = await Promise.all([
+        UserOtp.findOne({ phone: phoneNumber }),
+        UserOtp.findOne({ email }),
+      ]);
       const user = new User({
         email,
         userName,
         firstName,
         lastName,
         phoneNumber,
-        // age,
         imageUrl,
+        isPhoneVerified: isPhoneVerified ? true : false,
+        isEmailVerified: isEmailVerified ? true : false,
       });
       await user.save();
-      await sendOTPEmail(email, otp);
-      return res
-        .status(200)
-        .json({ message: "OTP sent to email. Please verify." });
+      return res.status(200).json({ message: "User created successfully" });
     } catch (err) {
       res.status(500).json({ message: "Signup error", error: err });
     }
   }
 );
-// Verify OTP
 authRoutes.post("/verify-otp", async (req: any, res: any) => {
   const { error } = verifyOtpSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
-  const { email, otp } = req.body;
 
-  const storedOtpData: any = await getOTP(email);
+  const { email, phone, otp, type } = req.body;
 
-  if (!storedOtpData) {
-    return res
-      .status(400)
-      .json({ message: "OTP request not found for this email" });
+  let storedOtpData: any;
+
+  if (type === "EMAIL") {
+    storedOtpData = await UserOtp.findOne({ email });
+  } else if (type === "MOBILE") {
+    storedOtpData = await UserOtp.findOne({ phone });
   }
 
-  // Check if OTP is expired
-  if (Date.now() > storedOtpData.expiresAt) {
+  if (!storedOtpData) {
+    return res.status(400).json({ message: `${type} OTP request not found` });
+  }
+
+  const otpExpireField =
+    type === "EMAIL" ? "emailOtpExpire" : "mobileOtpExpire";
+  if (Date.now() > storedOtpData[otpExpireField].getTime()) {
     return res
       .status(400)
       .json({ message: "OTP expired, please request a new one" });
   }
 
-  // Verify OTP
-  if (storedOtpData.otp !== otp) {
+  const otpField = type === "EMAIL" ? "emailOtp" : "mobileOtp";
+  if (storedOtpData[otpField] !== otp) {
     return res.status(400).json({ message: "Invalid OTP" });
   }
 
-  // OTP is valid, proceed with user creation
   try {
-    await User.findOneAndUpdate({ email }, { isVerified: true });
+    if (type === "EMAIL") {
+      await UserOtp.findOneAndUpdate({ email }, { isEmailVerified: true });
+    } else if (type === "MOBILE") {
+      await UserOtp.findOneAndUpdate({ phone }, { isMobileVerified: true });
+    }
 
-    res.status(201).json({
-      message: "User created and OTP verified successfully",
+    res.status(200).json({
+      message: `${type} verified successfully`,
     });
   } catch (err) {
-    res.status(500).json({ message: "Error saving user", error: err });
+    console.error("Error verifying OTP:", err);
+    res.status(500).json({ message: "Error verifying OTP", error: err });
   }
 });
 
 authRoutes.post("/set-password", async (req: any, res: any) => {
-  // Validate request body using Joi schema
   const { error } = setPasswordSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
 
@@ -121,10 +129,21 @@ authRoutes.post("/set-password", async (req: any, res: any) => {
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    if (!user.isVerified) {
+    const [isPhoneVerified, isEmailVerified] = await Promise.all([
+      UserOtp.findOne({ phone: user.phoneNumber }),
+      UserOtp.findOne({ email }),
+    ]);
+    await User.findOneAndUpdate(
+      { email },
+      {
+        isPhoneVerified: isPhoneVerified ? true : false,
+        isEmailVerified: isEmailVerified ? true : false,
+      }
+    );
+    if (!user.isPhoneVerified && !user.isEmailVerified) {
       return res
         .status(403)
-        .json({ message: "Please verify your email first" });
+        .json({ message: "Please verify your email and phone number first" });
     }
 
     // Hash the password before saving it
@@ -136,11 +155,11 @@ authRoutes.post("/set-password", async (req: any, res: any) => {
 
     const accessToken = generateAccessToken(user);
     const refreshToken = generateRefreshToken(user);
-    try {      
+    try {
       await sendTwilioSMS(
         user.phoneNumber,
         `You've signed up in Banking management system App successfully. Your password has been set.`
-      )
+      );
     } catch (error) {
       console.log(error);
     }
@@ -172,10 +191,10 @@ authRoutes.post("/login", async (req: any, res: any) => {
     }
 
     // Check if the user is verified before login
-    if (!user.isVerified) {
+    if (!user.isPhoneVerified && !user.isEmailVerified) {
       return res
         .status(403)
-        .json({ message: "Please verify your email first" });
+        .json({ message: "Please verify your email and phone number first" });
     }
 
     // Compare the password with the hashed password in the database
@@ -209,9 +228,9 @@ authRoutes.post("/login", async (req: any, res: any) => {
         imageUrl: user.imageUrl,
         phoneNumber: user.phoneNumber,
         userId: user._id,
-        // age: user.age,
         balance: user.balance,
-        isVerified: user.isVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified,
         role: user.role,
       },
     });
@@ -224,20 +243,46 @@ authRoutes.post("/login", async (req: any, res: any) => {
 authRoutes.post("/request-otp", async (req: any, res: any) => {
   const { error } = requestNewOtpSchema.validate(req.body);
   if (error) return res.status(400).json({ message: error.details[0].message });
-  const { email } = req.body;
+
+  const { type, email, phone } = req.body;
   try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    if (type === "MOBILE") {
+      let existingUserOtp = await UserOtp.findOne({ phone });
+
+      if (!existingUserOtp) {
+        existingUserOtp = new UserOtp({ phone });
+      }
+
+      const otp = generateOTP();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      existingUserOtp.mobileOtp = otp;
+      existingUserOtp.mobileOtpExpire = expiresAt;
+
+      await existingUserOtp.save();
+
+      await sendTwilioSMS(phone, `Your OTP is ${otp}`);
+      return res.status(200).json({ message: "OTP sent to mobile" });
     }
-    if (user.isVerified) {
-      return res.status(400).json({ message: "User already verified" });
+
+    if (type === "EMAIL") {
+      let existingUserOtp = await UserOtp.findOne({ email });
+
+      if (!existingUserOtp) {
+        existingUserOtp = new UserOtp({ email });
+      }
+
+      const otp = generateOTP();
+      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+      existingUserOtp.emailOtp = otp;
+      existingUserOtp.emailOtpExpire = expiresAt;
+
+      await existingUserOtp.save();
+
+      await sendOTPEmail(email, otp);
+      return res.status(200).json({ message: "OTP sent to email" });
     }
-    const otp = generateOTP();
-    const expiresAt = Date.now() + 10 * 60 * 1000; // OTP valid for 10 minutes
-    await User.findOneAndUpdate({ email }, { otp, otpExpiresAt: expiresAt });
-    await sendOTPEmail(email, otp);
-    return res.status(200).json({ message: "OTP sent to email" });
   } catch (err) {
     console.error("Error requesting OTP:", err);
     return res

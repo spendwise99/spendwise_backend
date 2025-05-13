@@ -26,7 +26,7 @@ userPayeeRoutes.post("/", async (req: any, res: any) => {
       return res.status(404).json({ message: "Payee not found" });
     }
 
-    if (payeeExists.isVerified === false) {
+    if (payeeExists.isPhoneVerified === false && payeeExists.isEmailVerified === false) {
       return res.status(400).json({ message: "Payee is not verified" });
     }
 

@@ -99,8 +99,6 @@ const sendOTPEmail = async (email: string, otp: string) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    await saveOTP(email, otp); // Save OTP to the database
-    console.log("OTP sent successfully:", info.response);
     return info;
   } catch (error) {
     console.error("Error sending OTP email:", error);
@@ -218,26 +216,4 @@ const sendPaymentEmail = async ({
   }
 };
 
-// Function to save OTP with expiration time (10 minutes)
-const saveOTP = async (email: string, otp: string) => {
-  const expiresAt = Date.now() + 10 * 60 * 1000; // OTP expires in 10 minutes
-  await User.findOneAndUpdate(
-    { email },
-    { otp, otpExpiresAt: new Date(expiresAt) },
-    { new: true, upsert: true }
-  );
-};
-
-// Function to get OTP from store
-const getOTP = async (email: string) => {
-  const user = await User.findOne({ email });
-  if (!user) {
-    throw new Error("User not found");
-  }
-  return {
-    otp: user.otp,
-    expiresAt: user.otpExpiresAt,
-  };
-};
-
-export { generateOTP, sendOTPEmail, saveOTP, getOTP, sendPaymentEmail };
+export { generateOTP, sendOTPEmail, sendPaymentEmail };

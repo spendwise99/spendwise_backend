@@ -26,9 +26,9 @@ userRoutes.get("/", async (req: any, res: any) => {
         email: user.email,
         imageUrl: user.imageUrl,
         balance: user.balance,
-        // age: user.age,
         phoneNumber: user.phoneNumber,
-        isVerified: user.isVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified,
         role: user.role,
       },
     });
@@ -52,7 +52,6 @@ userRoutes.get("/all", async (req: any, res: any) => {
         userName: user.userName,
         email: user.email,
         imageUrl: user.imageUrl,
-        // age: user.age,
         role: user.role,
       })),
     });
@@ -88,9 +87,9 @@ userRoutes.patch("/", async (req: any, res: any) => {
         imageUrl: user.imageUrl,
         phoneNumber: user.phoneNumber,
         userId: user._id,
-        // age: user.age,
         balance: user.balance,
-        isVerified: user.isVerified,
+        isPhoneVerified: user.isPhoneVerified,
+        isEmailVerified: user.isEmailVerified,
       },
     });
   } catch (error) {

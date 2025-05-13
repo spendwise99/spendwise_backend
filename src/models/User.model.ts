@@ -6,11 +6,9 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   phoneNumber: string;
-  // age: number;
   imageUrl: string;
-  isVerified: boolean;
-  otp: string;
-  otpExpiresAt: Date;
+  isPhoneVerified: boolean;
+  isEmailVerified: boolean;
   password: string;
   balance: 0;
   role: "user" | "admin";
@@ -23,11 +21,9 @@ const UserSchema: Schema = new Schema(
     firstName: { type: String },
     lastName: { type: String },
     phoneNumber: { type: String },
-    // age: { type: Number },
     imageUrl: { type: String },
-    isVerified: { type: Boolean, default: false },
-    otp: { type: String, default: null },
-    otpExpiresAt: { type: Date, default: null },
+    isPhoneVerified: { type: Boolean, default: false },
+    isEmailVerified: { type: Boolean, default: false },
     balance: { type: Number, default: 0 },
     password: { type: String },
     role: {
