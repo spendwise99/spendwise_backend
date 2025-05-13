@@ -6,7 +6,7 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   phoneNumber: string;
-  age: number;
+  // age: number;
   imageUrl: string;
   isVerified: boolean;
   otp: string;
@@ -23,7 +23,7 @@ const UserSchema: Schema = new Schema(
     firstName: { type: String },
     lastName: { type: String },
     phoneNumber: { type: String },
-    age: { type: Number },
+    // age: { type: Number },
     imageUrl: { type: String },
     isVerified: { type: Boolean, default: false },
     otp: { type: String, default: null },
