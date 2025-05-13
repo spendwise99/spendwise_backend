@@ -31,7 +31,7 @@ authRoutes.post(
       return res.status(400).json({ message: error.details[0].message });
 
     try {
-      const { email, userName, firstName, lastName, phoneNumber, age } =
+      const { email, userName, firstName, lastName, phoneNumber } =
         req.body;
 
       const existingUser = await User.findOne({ email });
@@ -57,7 +57,6 @@ authRoutes.post(
         firstName,
         lastName,
         phoneNumber,
-        age,
         imageUrl,
       });
       await user.save();
