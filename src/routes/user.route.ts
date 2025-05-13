@@ -26,7 +26,7 @@ userRoutes.get("/", async (req: any, res: any) => {
         email: user.email,
         imageUrl: user.imageUrl,
         balance: user.balance,
-        age: user.age,
+        // age: user.age,
         phoneNumber: user.phoneNumber,
         isVerified: user.isVerified,
         role: user.role,
@@ -52,7 +52,7 @@ userRoutes.get("/all", async (req: any, res: any) => {
         userName: user.userName,
         email: user.email,
         imageUrl: user.imageUrl,
-        age: user.age,
+        // age: user.age,
         role: user.role,
       })),
     });
@@ -66,11 +66,11 @@ userRoutes.patch("/", async (req: any, res: any) => {
   if (error) return res.status(400).json({ message: error.details[0].message });
   try {
     const requestedUser = req.user;
-    const { firstName, lastName, phoneNumber, age, userName } = req.body;
+    const { firstName, lastName, phoneNumber,  userName } = req.body;
 
     const user = await User.findOneAndUpdate(
       { _id: requestedUser.userId },
-      { firstName, lastName, phoneNumber, age, userName },
+      { firstName, lastName, phoneNumber,  userName },
       { new: true }
     );
 
@@ -88,7 +88,7 @@ userRoutes.patch("/", async (req: any, res: any) => {
         imageUrl: user.imageUrl,
         phoneNumber: user.phoneNumber,
         userId: user._id,
-        age: user.age,
+        // age: user.age,
         balance: user.balance,
         isVerified: user.isVerified,
       },
