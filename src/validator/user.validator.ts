@@ -5,5 +5,4 @@ export const userUpdateSchema = Joi.object({
   lastName: Joi.string().required(),
   phoneNumber: Joi.string().required(),
   userName: Joi.string().required(),
-  age: Joi.number().integer().min(0).required(),
 });
